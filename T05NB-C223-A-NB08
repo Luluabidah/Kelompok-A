@@ -1,0 +1,160 @@
+import numpy as np
+import pandas as pd
+from sklearn.model_selection import train_test_split
+
+# Model specific Library
+from sklearn.naive_bayes import GaussianNB
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.naive_bayes import BernoulliNB
+
+from sklearn.datasets import load_breast_cancer
+breast_cancer = load_breast_cancer()
+breast_cancer
+breast_cancer.keys()
+breast_cancer.data
+# This is our actual data.
+# These are the feature names for our dataset (data)
+breast_cancer.feature_names
+# These are our target data
+breast_cancer.target
+breast_cancer.target_names
+
+# Membuat Data Frame
+df = pd.DataFrame(
+    np.c_[breast_cancer.data, breast_cancer.target],
+    columns = [list(breast_cancer.feature_names)+ ['target']]
+                 )
+df.head()
+df.tail()
+df.shape
+df.describe()
+df.info()
+X = df.iloc[:, 0:-1]
+y = df.iloc[:,-1]
+X.shape, y.shape
+X_train, X_val, y_train, y_val = train_test_split(X, y, test_size = 0.2, random_state = 999)
+X_train.shape, y_train.shape, X_val.shape, y_val.shape
+
+#Train Naive Bayes Classifier Model
+#Gaussian Naive Bayes
+clf = GaussianNB()
+clf.fit(X_train, y_train)
+clf.score(X_val, y_val)
+
+#Multinomial Naive Bayes
+clf_mn = MultinomialNB()
+clf_mn.fit(X_train, y_train)
+clf_mn.score(X_val, y_val)
+
+#Bernoulli Naive Bayes
+clf_b = BernoulliNB()
+clf_b.fit(X_train, y_train)
+clf_b.score(X_val, y_val)
+
+#Predict
+pd.set_option('display.max_columns', None)
+# print(df.iloc[99])
+df[99:100]
+patient1 = [14.42,19.77,94.48,642.5,0.09752,0.1141,0.09388,0.05839,0.1879,0.0639,0.2895,1.851,2.376,26.85,0.008005,0.02895,0.03321,0.01424,0.01462,0.004452,16.33,30.86,109.5,826.4,0.1431,0.3026,0.3194,0.1565,0.2718,0.09353]
+patient1
+#Need to convert the patient1 dataset into 2-Dimension.
+patient1 = np.array([patient1])
+patient1
+clf.predict(patient1)
+pred = clf.predict(patient1)
+
+if pred[0] == 0:
+    print("Patient is suffering from Cancer (Malignant Tumor)")
+else:
+    print("Patient has no Cancer (Benign)")
+
+#Probability
+pred_prob = clf.predict_proba(patient1)
+pred_prob
+pred_prob.ndim
+pred_prob[0]
+
+#Visualize it
+import matplotlib.pyplot as plt
+import seaborn as sns
+plt.bar(breast_cancer.target_names, pred_prob[0])
+plt.title('Prediction Probability for Malignant Vs Benign')
+plt.xlabel('Probability')
+plt.xticks(pred_prob[0])
+# plt.ylabel('y')
+plt.show()
+sns.barplot(y = pred_prob[0], x = breast_cancer.target_names)
+line = plt.bar(breast_cancer.target_names,pred_prob[0])
+plt.xlabel('Probability')
+plt.ylabel("Value")
+
+for i in range(2):
+    plt.annotate(str(round(pred_prob[0][i],2)), xy=(breast_cancer.target_names[i],pred_prob[0][i]))
+
+plt.show()
+
+from sklearn.metrics import confusion_matrix, classification_report, accuracy_score
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+models = {
+    'GaussianNB': clf,
+    'MultinomialNB': clf_mn,
+    'BernoulliNB': clf_b
+}
+
+for name, model in models.items():
+    print(f"{name} Metrics:")
+    y_pred = model.predict(X_val)
+    
+    # Confusion Matrix
+    cm = confusion_matrix(y_val, y_pred)
+    print("Confusion Matrix:\n", cm)
+    print("Classification Report:\n", classification_report(y_val, y_pred))
+    print("Accuracy Score:", accuracy_score(y_val, y_pred))
+    
+    # Confusion Matrix Visualization
+    plt.figure(figsize=(5,4))
+    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", xticklabels=breast_cancer.target_names, yticklabels=breast_cancer.target_names)
+    plt.title(f'Confusion Matrix: {name}')
+    plt.xlabel('Predicted Label')
+    plt.ylabel('True Label')
+    plt.show()
+    
+    print("-" * 60)
+
+from sklearn.metrics import precision_score, recall_score, f1_score
+
+# Dictionary untuk menyimpan metrik dari tiap model
+metrics_summary = {
+    'Model': [],
+    'Accuracy': [],
+    'Precision': [],
+    'Recall': [],
+    'F1 Score': []
+}
+
+for name, model in models.items():
+    y_pred = model.predict(X_val)
+    metrics_summary['Model'].append(name)
+    metrics_summary['Accuracy'].append(accuracy_score(y_val, y_pred))
+    metrics_summary['Precision'].append(precision_score(y_val, y_pred))
+    metrics_summary['Recall'].append(recall_score(y_val, y_pred))
+    metrics_summary['F1 Score'].append(f1_score(y_val, y_pred))
+
+# Visualisasi dalam bentuk bar plot
+import pandas as pd
+
+df_metrics = pd.DataFrame(metrics_summary)
+
+# Plotting
+plt.figure(figsize=(10,6))
+df_metrics.set_index('Model').plot(kind='bar', figsize=(10,6))
+plt.title("Comparison of Naive Bayes Models on Breast Cancer Dataset")
+plt.ylabel("Score")
+plt.ylim(0, 1.05)
+plt.grid(axis='y')
+plt.xticks(rotation=0)
+plt.legend(loc='lower right')
+plt.tight_layout()
+plt.show()
